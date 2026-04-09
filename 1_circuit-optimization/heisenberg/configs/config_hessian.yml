@@ -1,0 +1,12 @@
+hamiltonian: heisenberg
+n_sites: 8
+t: 0.25
+J: 
+- 1.
+- 1.
+- -0.5
+h: 
+- 0.75
+- 0.
+- 0.
+load_which: 2

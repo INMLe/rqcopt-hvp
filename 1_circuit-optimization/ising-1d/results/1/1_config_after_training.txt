@@ -1,0 +1,32 @@
+# Configuration of model after training
+
+hamiltonian: ising-1d
+load: False
+n_sites: 8
+t: 2.0
+J: 1.0
+g: 0.75
+h: 0.6
+disordered: False
+is_TI: True
+degree: 2
+n_repetitions: 3
+truncation_dim: 32
+rel_tol: 1e-11
+abs_tol: 1e-14
+n_samples_train: 16
+n_samples_test: 96
+cost: HST
+optimizer: adam
+n_iter: 500
+lr: 0.05
+script_path: /work/go68qah/rqcopt-hvp/1_circuit-optimization
+model_nbr: 1
+model_dir: /work/go68qah/rqcopt-hvp/1_circuit-optimization/ising-1d/results/1
+samples_dir: /work/go68qah/rqcopt-hvp/1_circuit-optimization/ising-1d/samples
+n_id_layers: 0
+use_tebd: True
+first_layer_odd: True
+n_layers: 7
+n_gates: 7
+sample_filename: /work/go68qah/rqcopt-hvp/1_circuit-optimization/ising-1d/samples/samples_nsites8_t2.0_J1.0_g0.75_h0.6_nsamples112.h5

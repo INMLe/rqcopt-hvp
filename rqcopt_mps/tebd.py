@@ -22,7 +22,7 @@ def create_tebd_circuit(t, n_sites, n_repetitions, degree, hamiltonian='ising-1d
     kwargs['n_repetitions'] = n_repetitions
     kwargs['degree'] = degree
     kwargs['hamiltonian'] = hamiltonian
-    layers, qubits = get_initial_gates(n_sites, n_id_layers=0, use_tebd=True, is_TI=is_TI, **kwargs)
+    layers, qubits = get_initial_gates(n_sites, use_tebd=True, is_TI=is_TI, **kwargs)
     return layers, qubits
 
 def run_tebd(psi, Gs, qubits, flat_idxs, layer_ends, first_layer_increasing, 

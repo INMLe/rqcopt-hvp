@@ -1,0 +1,24 @@
+hamiltonian: heisenberg
+use_full_rank_matrix: false
+n_sites: 8
+t: 0.25
+J: 
+- 1.
+- 1.
+- -0.5
+h: 
+- 0.75
+- 0.
+- 0.
+disordered: false
+is_TI: true
+degree: 4
+n_repetitions: 20
+truncation_dim: 32
+rel_tol: 1.0e-11
+abs_tol: 1.0e-14
+compress: true
+err_thres: 1e-10
+reference_seed: 0
+n_samples: 16
+load_samples: true

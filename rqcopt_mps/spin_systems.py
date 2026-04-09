@@ -282,7 +282,7 @@ def get_brickwall_trotter_gates_spin_chain_TI(t, n_sites, n_repetitions=1, degre
 
     dt = t/n_repetitions
 
-    n_layers = get_nlayers(degree, n_repetitions, n_id_layers=0, hamiltonian=hamiltonian)
+    n_layers = get_nlayers(degree, n_repetitions)
     odd_pairs = jnp.asarray([[i,i+1] for i in range(0,n_sites-1,2)])
     even_pairs = jnp.asarray([[i,i+1] for i in range(1,n_sites-1,2)])[::-1]  # Snaking order
     gate_qubits = [odd_pairs if (ell % 2 == 0) else even_pairs for ell in range(n_layers)]

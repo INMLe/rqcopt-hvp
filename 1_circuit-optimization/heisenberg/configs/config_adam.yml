@@ -1,0 +1,25 @@
+hamiltonian: heisenberg
+load: false
+n_sites: 8
+t: 0.25
+J: 
+- 1.
+- 1.
+- -0.5
+h: 
+- 0.75
+- 0.
+- 0.
+disordered: false
+degree: 2
+n_repetitions: 3
+is_TI: true
+truncation_dim: 32
+rel_tol: 1.0e-11
+abs_tol: 1.0e-14
+n_samples_train: 16
+n_samples_test: 96
+cost: HST
+optimizer: adam
+n_iter: 500
+lr: 5.0e-3

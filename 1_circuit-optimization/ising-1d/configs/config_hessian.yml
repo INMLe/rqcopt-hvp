@@ -1,0 +1,7 @@
+hamiltonian: ising-1d
+t: 2.0
+n_sites: 8
+J: 1.0
+g: 0.75
+h: 0.6
+load_which: 2

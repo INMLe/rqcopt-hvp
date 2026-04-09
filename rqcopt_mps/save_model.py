@@ -289,7 +289,7 @@ def load_results_h5(path):
 def make_ckpt_manager(ckpt_dir: str):
     os.makedirs(ckpt_dir, exist_ok=True)
     options = ocp.CheckpointManagerOptions(
-        max_to_keep=50,
+        max_to_keep=10,
         create=True,
         cleanup_tmp_directories=True,
         save_interval_steps=10**18,
@@ -307,46 +307,6 @@ def save_ckpt_adam(manager, step, x, f_iter, f_test, m, v):
         return
     state = {"step": step, "x": x, "f_iter": f_iter, "f_test": f_test, "m": m, "v": v}
     manager.save(step, args=ocp.args.StandardSave(state), force=True)
-
-def load_latest_checkpoint(
-    ckpt_dir,
-    x_template,
-    r_template=1.0,
-):
-    mgr = make_ckpt_manager(ckpt_dir)
-    try:
-        # Ensure we look at what’s actually on disk (helpful on shared FS)
-        steps = sorted(mgr.all_steps(read=True))
-        if not steps:
-            return x_template, None, None, r_template, 0
-
-        last_err = None
-        for step in reversed(steps):  # try latest, then older
-            try:
-                state = mgr.restore(step)  # no template => no shape mismatch for variable-length histories
-                loaded_step = int(state.get("step", step))
-
-                if jax.process_index() == 0:
-                    # `step` is the directory step; `loaded_step` is whatever you stored in state["step"]
-                    print(f"[ckpt] Restored checkpoint dir step={step}, state['step']={loaded_step}")
-
-                return (
-                    state["x"],
-                    state["f_iter"],
-                    state["f_test"],
-                    state["radius"],
-                    loaded_step,
-                )
-            except Exception as e:
-                last_err = e
-                continue
-
-        # If we get here, none of the checkpoints could be restored
-        raise RuntimeError(
-            f"Failed to restore any checkpoint from steps={steps}. Last error: {last_err}"
-        ) from last_err
-    finally:
-        mgr.close()
 
 def load_specific_checkpoint_trust_region(
     ckpt_dir,

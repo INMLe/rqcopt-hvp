@@ -193,9 +193,8 @@ def plot_loss(config, err_iter, err_test_iter, n_deriv_evals=[], mode='final', s
     err_init_test = err_test_iter[0]
 
     # Visualize optimization progress
-    print("HAHAHA", n_deriv_evals)
-    if len(n_deriv_evals)==0: points = jnp.arange(len(err_iter))
-    else: points = jnp.cumsum(jnp.asarray(n_deriv_evals)); print('LOL')
+    if len(n_deriv_evals)==0: points = jnp.array([])
+    else: points = jnp.cumsum(jnp.asarray(n_deriv_evals))
     err_iter = jnp.asarray(err_iter)
     err_test_iter = jnp.asarray(err_test_iter)
     
@@ -208,8 +207,9 @@ def plot_loss(config, err_iter, err_test_iter, n_deriv_evals=[], mode='final', s
     title += '(' + mode + ')'
 
     plt.figure(dpi=300)
-    plt.semilogy(points[:len(err_iter)], err_iter, '.-', label=label_train)
-    plt.semilogy(points[:len(err_test_iter)], err_test_iter, '.-', label=label_test)
+    plt.semilogy(err_iter, '.-', label=label_train)
+    plt.semilogy(err_test_iter, '.-', label=label_test)
+    if len(points)>0: plt.semilogy(points, err_test_iter, '--', label="HVP evaluations")
     plt.xlabel("Iteration")
     plt.ylabel("$\mathcal{C}$")
     plt.legend()
