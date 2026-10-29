@@ -23,13 +23,12 @@ You can generate the reference by running ``python3 generate-reference.py hamilt
 Similarly, you can run the Riemannian optimization by executing ``python3 run-optimization.py hamiltonian/configs/config_{}.yml`` with ``config_tr.yml`` for the trust-region method and ``config_adam.yml`` for the Riemannian ADAM method.
 In both cases, ``hamiltonian`` should be replaced by the folder name of the model you want to run, i.e., ``ising-1d`` or ``heisenberg``.
 
-## Analyzing the Hessian spectrum
-The folder ``2_hessian-spectrum-analysis`` contains the script to evaluate the eigenvalue spectrum of the Riemannian Hessian.
-
 ## Evaluating original Trotter circuits
 The folder ``3_trotterization`` contains a script to evaluate the (not-optimized) Trotter circuits.
+Run ``python3 run-trotter-comparison.py configs/config_{hamiltonian}.yml``.
 
 ## Reproducing figures from manuscript
-The folder ``4_plotting-results`` contains the numerical data and the script used to generate the figures for the publication.
+The folder ``4_plotting-results`` contains the numerical data and the script used to generate Figs. 4-6 in the publication.
+Run ``python3 plot-results.py``.
 
 
