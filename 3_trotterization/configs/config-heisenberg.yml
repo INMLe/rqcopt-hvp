@@ -1,0 +1,37 @@
+hamiltonian: heisenberg
+n_sites: 8
+J:
+- 1.
+- 1.
+- -0.5
+h:
+- 0.75
+- 0.
+- 0.
+t: 0.25
+is_TI: true
+degree:
+- 1
+- 2
+- 4
+n_repetitions_start:
+- 1
+- 1
+- 1
+n_repetitions_end:
+- 10
+- 10
+- 4
+# Number of leading points (smallest n) left out of the slope fit, per degree
+n_fit_skip:
+- 1
+- 2
+- 0
+truncation_dim: 64
+rel_tol: 1.0e-11
+abs_tol: 1.0e-14
+n_samples: 16
+# Ignore stored Trotter data in data/ and compute everything again
+recompute: false
+# Save newly computed Trotter data to data/ (stored data is loaded whenever it exists)
+store_data: true

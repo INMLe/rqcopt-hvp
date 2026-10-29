@@ -1,0 +1,32 @@
+hamiltonian: ising-1d
+n_sites: 8
+J: 1.
+g: 0.75
+h: 0.6
+t: 2.
+is_TI: true
+degree:
+- 1
+- 2
+- 4
+n_repetitions_start:
+- 1
+- 1
+- 1
+n_repetitions_end:
+- 20
+- 20
+- 10
+# Number of leading points (smallest n) left out of the slope fit, per degree
+n_fit_skip:
+- 1
+- 2
+- 4
+truncation_dim: 64
+rel_tol: 1.0e-11
+abs_tol: 1.0e-14
+n_samples: 16
+# Ignore stored Trotter data in data/ and compute everything again
+recompute: false
+# Save newly computed Trotter data to data/ (stored data is loaded whenever it exists)
+store_data: true

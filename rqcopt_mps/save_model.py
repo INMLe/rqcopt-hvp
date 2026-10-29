@@ -1,12 +1,15 @@
-import h5py
-import os
 import glob
+import os
 
-import numpy as np
-import jax.numpy as jnp
+import h5py
 import jax
-jax.config.update("jax_enable_x64", True)
+import jax.numpy as jnp
+import numpy as np
 import orbax.checkpoint as ocp
+from jax import Array, config
+
+config.update("jax_enable_x64", True)
+
 
 def _convert_attr(val):
     """Convert HDF5 attributes (numpy scalars → Python scalars)."""
@@ -20,10 +23,11 @@ def _convert_attr(val):
         return val.decode("utf-8")  # in case strings were stored as bytes
     else:
         return val
-    
+
+
 def _to_numpy(x):
     """Convert JAX arrays / numpy arrays to numpy; pass through python scalars."""
-    if isinstance(x, jax.Array):
+    if isinstance(x, Array):
         return np.asarray(x)  # device -> host
     if hasattr(jnp, "ndarray") and isinstance(x, jnp.ndarray):
         return np.asarray(x)
@@ -31,8 +35,17 @@ def _to_numpy(x):
         return x
     return x
 
+
 def to_jax(x, keep_python_scalars=True):
-    """Recursively convert numpy arrays (and optionally numpy scalars) to jax arrays."""
+    """
+    Recursively convert numpy arrays (and optionally numpy scalars) to jax arrays.
+
+    keep_python_scalars=True:
+        - numpy scalars -> python scalars (float/int/bool)
+        - numpy arrays  -> jax arrays
+    keep_python_scalars=False:
+        - numpy scalars -> 0-d jax arrays
+    """
     # dict
     if isinstance(x, dict):
         return {k: to_jax(v, keep_python_scalars=keep_python_scalars) for k, v in x.items()}
@@ -55,7 +68,7 @@ def to_jax(x, keep_python_scalars=True):
 
     # leave everything else untouched (strings, None, python floats, etc.)
     return x
-    
+
 
 # ----- Samples pairs -----
 def get_samples_filename(**kwargs):
@@ -68,18 +81,14 @@ def get_samples_filename(**kwargs):
         filename = (
             f"samples_nsites{kwargs['n_sites']}_t{kwargs['t']}"
             )
-    elif kwargs['hamiltonian'] == 'nnn-ising':
-        filename = (
-            f"samples_nsites{kwargs['n_sites']}_t{kwargs['t']}"
-            f"_J1{kwargs['J1']}_J2{kwargs['J2']}_g{kwargs['g']}"
-            )
     matches = sorted(glob.glob(os.path.join(kwargs["samples_dir"], filename + "*")))
     return matches[-1]
+
 
 def save_mps_pairs(filename, initial_states, reference_states, config=None):
     """
     Save a list initial psis and reference phis to an HDF5 file.
-    
+
     pairs: list [psis, phis]
     """
     with h5py.File(filename, "w") as f:
@@ -94,10 +103,11 @@ def save_mps_pairs(filename, initial_states, reference_states, config=None):
         f.create_dataset("initial_states",  data=initial_states)
         f.create_dataset("reference_states",  data=reference_states)
 
+
 def load_reference_data(filename):
     """
     Load MPS pairs and optional initial states from an HDF5 file.
-    
+
     Returns:
         pairs: list of tuples (mps1, mps2)
         params: dict of saved parameters
@@ -117,35 +127,12 @@ def load_reference_data(filename):
     return initial_states, reference_states, params
 
 
-# ----- Model number -----
-
-def remove_blank_lines(fdir):
-    result = ""
-    with open(fdir, "r") as file:
-        result += "".join(line for line in file if not line.isspace())
-        result = os.linesep.join([s for s in result.splitlines() if s])
-    with open(fdir, "w") as file:
-        file.seek(0)
-        file.write(result)
-            
-def get_model_nbr(model_list):
-    with open(model_list, "r") as file:
-        for last_line in file:
-            model_nbr=int(last_line)+1
-        file.close()
-        print(model_nbr)
-    with open(model_list, "a") as file:
-        file.write('\n'+str(model_nbr))
-        file.close()
-    return model_nbr
-
-
 # ----- Configuration -----
 def save_config(config, status='before_training'):
     # status either 'before_training' or 'after_training' or 'intermediate'
 
     # Store intermediate config
-    if status=='intermediate':
+    if status == 'intermediate':
         filename = f"{config['model_nbr']}_config.npy"
         fdir = os.path.join(config['model_dir'], filename)
         _ = jnp.save(fdir, config)
@@ -154,21 +141,22 @@ def save_config(config, status='before_training'):
         filename = f"{config['model_nbr']}_config_{status}.txt"
         fdir = os.path.join(config['model_dir'], filename)
         with open(fdir, 'w') as f:
-            if status=='before_training':
+            if status == 'before_training':
                 f.write('# Configuration of model before training\n\n')
-            elif status=='after_training':
+            elif status == 'after_training':
                 f.write('# Configuration of model after training\n\n')
-            
+
             for key in config.keys():
                 f.write('{}: {}\n'.format(key, config[key]))
-                
-        if status=='before_training':
+
+        if status == 'before_training':
             print(f'\n... Configuration before training saved to:\n{fdir}\n')
-        if status=='after_training':
+        if status == 'after_training':
             filename = f"{config['model_nbr']}_config.npy"
             fdir = os.path.join(config['model_dir'], filename)
             _ = jnp.save(fdir, config)
             print('\n... Configuration after training saved to:\n{}\n'.format(fdir))
+
 
 def load_config(config, loaded_config):
     '''
@@ -182,18 +170,18 @@ def load_config(config, loaded_config):
     --------
     config: configuration of the current model updated by the configuration of the loaded model
     '''
-    
+
     not_load_keys = [
-        'model_nbr', 'model_dir', 'load', 'load_which', 'load_dir', 
-        'samples_dir', 'output', 'n_iter', 'radius_init', 'sample_filename'
+        'model_nbr', 'model_dir', 'load', 'load_which', 'load_dir',
+        'samples_dir', 'output', 'n_iter', 'radius_init'
         ]
     # Overwrite the loaded config
     for key in [
         'degree', 'n_repetitions', 'load_server',
-        'truncation_dim', 'n_iter', 'optimizer'
+        'truncation_dim', 'n_iter', 'optimizer', 'n_ckpt_keep'
         ]:
         if key in config.keys(): not_load_keys.append(key)
-    
+
     for key in loaded_config.keys():
         if key not in not_load_keys:
             config[key] = loaded_config.get(key)
@@ -249,11 +237,13 @@ def _write_item(h5group, key, value, compression="gzip"):
     h5group.create_dataset(key, data=repr(value), dtype=dt)
     h5group.attrs[f"{key}__stored_as_repr"] = True
 
+
 def save_results_h5(path, results: dict, compression="gzip"):
     """Save a (possibly nested) results dict to an HDF5 file."""
     with h5py.File(path, "w") as f:
         for k, v in results.items():
             _write_item(f, k, v, compression=compression)
+
 
 def _read_item(h5obj):
     """Read back data; returns numpy arrays / python scalars / dicts."""
@@ -277,6 +267,7 @@ def _read_item(h5obj):
             return data
     return data
 
+
 def load_results_h5(path):
     with h5py.File(path, "r") as f:
         results = _read_item(f)
@@ -286,15 +277,20 @@ def load_results_h5(path):
 
 # ----- Checkpoint -----
 
-def make_ckpt_manager(ckpt_dir: str):
+def make_ckpt_manager(ckpt_dir: str, max_to_keep=10):
+    '''
+    max_to_keep: number of most recent checkpoints to keep (None keeps all).
+    Older checkpoints are deleted when a new one is saved.
+    '''
     os.makedirs(ckpt_dir, exist_ok=True)
     options = ocp.CheckpointManagerOptions(
-        max_to_keep=10,
+        max_to_keep=max_to_keep,
         create=True,
         cleanup_tmp_directories=True,
         save_interval_steps=10**18,
     )
     return ocp.CheckpointManager(ckpt_dir, options=options)
+
 
 def save_ckpt_trust_region(manager, step, x, f_iter, f_test, radius, n_deriv_evals):
     if jax.process_index() != 0:
@@ -302,21 +298,23 @@ def save_ckpt_trust_region(manager, step, x, f_iter, f_test, radius, n_deriv_eva
     state = {"step": step, "x": x, "f_iter": f_iter, "f_test": f_test, "radius": radius, "n_deriv_evals": n_deriv_evals}
     manager.save(step, args=ocp.args.StandardSave(state), force=True)
 
+
 def save_ckpt_adam(manager, step, x, f_iter, f_test, m, v):
     if jax.process_index() != 0:
         return
     state = {"step": step, "x": x, "f_iter": f_iter, "f_test": f_test, "m": m, "v": v}
     manager.save(step, args=ocp.args.StandardSave(state), force=True)
 
+
 def load_specific_checkpoint_trust_region(
     ckpt_dir,
     target_step,
 ):
-    mgr = make_ckpt_manager(ckpt_dir)
+    mgr = make_ckpt_manager(ckpt_dir, max_to_keep=None)
     try:
         # Read available steps on disk
         steps = mgr.all_steps(read=True)
-        
+
         # Check if the requested checkpoint actually exists
         if target_step not in steps:
             raise ValueError(
@@ -325,7 +323,7 @@ def load_specific_checkpoint_trust_region(
             )
 
         # Attempt to restore the specific step
-        state = mgr.restore(target_step) 
+        state = mgr.restore(target_step)
         loaded_step = int(state.get("step", target_step))
 
         if jax.process_index() == 0:
@@ -339,16 +337,17 @@ def load_specific_checkpoint_trust_region(
             state["n_deriv_evals"],
             loaded_step,
         )
-        
+
     except Exception as e:
         # Wrap any restoration errors (e.g. corrupted files) with a clear message
         raise RuntimeError(
             f"Failed to restore specific checkpoint step={target_step}. "
             f"Error: {e}"
         ) from e
-        
+
     finally:
         mgr.close()
+
 
 def load_latest_checkpoint_trust_region(
     ckpt_dir,
@@ -356,7 +355,7 @@ def load_latest_checkpoint_trust_region(
     r_template=1.0,
     i_template=0.
 ):
-    mgr = make_ckpt_manager(ckpt_dir)
+    mgr = make_ckpt_manager(ckpt_dir, max_to_keep=None)
     try:
         # Ensure we look at what’s actually on disk (helpful on shared FS)
         steps = sorted(mgr.all_steps(read=True))
@@ -392,13 +391,14 @@ def load_latest_checkpoint_trust_region(
     finally:
         mgr.close()
 
+
 def load_latest_checkpoint_adam(
     ckpt_dir,
     x_template,
     m_template,
     v_template,
 ):
-    mgr = make_ckpt_manager(ckpt_dir)
+    mgr = make_ckpt_manager(ckpt_dir, max_to_keep=None)
     try:
         # Ensure we look at what’s actually on disk (helpful on shared FS)
         steps = sorted(mgr.all_steps(read=True))

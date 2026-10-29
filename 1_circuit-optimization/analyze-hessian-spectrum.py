@@ -1,22 +1,30 @@
 import os
-import argparse
 from sys import argv
+
 from yaml import safe_load
 
-nbatch = 8
+# This needs to be set before importing jax!
+nbatch = 16
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["XLA_FLAGS"] = f"--xla_force_host_platform_device_count={nbatch}"
-os.environ["JAX_PLATFORMS"] = "cpu"      # preferred
+os.environ["JAX_PLATFORMS"] = "cpu"
 
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import colors, cm
-import jax.numpy as jnp
 import jax
-jax.config.update("jax_enable_x64", True)
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib import cm, colors
 
-from rqcopt_mps import *
+from rqcopt_mps import (
+    brickwall_circuit,
+    objective_function,
+    riemannian_manifold,
+    save_model,
+    tn_helpers,
+)
+
+jax.config.update("jax_enable_x64", True)
 
 
 def setup_config(config):
@@ -32,7 +40,6 @@ def setup_config(config):
     config["sample_filename"] = config["samples_dir"] + fname
 
     return config
-
 
 
 def load_preoptimized_model(config):
@@ -82,6 +89,8 @@ def get_hessian(qubits, ket, bra, Gs, chi_max, nlayers, project_basis_to_tangent
     (G H) = (G H)^T, where G is the Gram matrix of the basis.
     """
 
+    layout = brickwall_circuit.get_circuit_layout(qubits)
+
     def run_once(Zs_basis):
         cost, grad, hvp = (
             objective_function.compute_riemannian_loss_gradient_hvp_HST_loop(
@@ -89,8 +98,7 @@ def get_hessian(qubits, ket, bra, Gs, chi_max, nlayers, project_basis_to_tangent
                 bra,
                 Gs,
                 Zs_basis,
-                qubits,
-                True,
+                layout,
                 chi_max,
                 is_TI=True,
                 rel_tol=1e-12,
@@ -215,7 +223,7 @@ def main(idx=None):
     print(f"Performing step {idx}" if idx is not None else "")
     n_steps = 10
     if idx is None:
-        iterator = range(1,n_steps+1)
+        iterator = range(1, n_steps+1)
     else:
         iterator = [
             idx,
@@ -235,10 +243,9 @@ def main(idx=None):
         np.save(f"./{hamiltonian}/spectrum/hessian_coords_{step}.npy", hessian)
         np.save(f"./{hamiltonian}/spectrum/hessian_orth_{step}.npy", hessian_orth)
         np.save(f"./{hamiltonian}/spectrum/gram_{step}.npy", gram)
-    
+
    # Gs, config, _, _, _ = load_checkpoint_gates(hamiltonian, 0)
 
-    nqubits = config["n_sites"]
     if idx is not None:
         print("Done")
         return
@@ -262,13 +269,9 @@ def main(idx=None):
         evals_orth = np.linalg.eigvalsh(hessian_orth)
         evals_orth = np.sort(np.clip(np.abs(evals_orth.real), 1e-16, None))
 
-        evals_coords_pts, evals_orth_pts = range(len(evals_coords)), range(len(evals_orth))
-
-
-        
+        evals_orth_pts = range(len(evals_orth))
 
         step_color = cmap(step)
-
 
         axes.plot(
             evals_orth_pts,
@@ -298,12 +301,4 @@ def main(idx=None):
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("--idx", type=int, default=None)
-    # args = parser.parse_args()
-
-    # main("ising-1d", args.idx)
-    # main("heisenberg", args.idx)
-
     main()
-    #main("heisenberg")

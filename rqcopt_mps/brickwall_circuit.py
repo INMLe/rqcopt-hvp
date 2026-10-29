@@ -1,58 +1,26 @@
-import jax.numpy as jnp
-from scipy.stats import unitary_group
-from jax import config
-config.update("jax_enable_x64", True)
+from typing import NamedTuple
 
-from .util import tensor_product
+import jax.numpy as jnp
+from jax import config
+
 from .spin_systems import (
-    get_brickwall_trotter_gates_spin_chain, 
-    get_brickwall_trotter_gates_spin_chain_TI
-    )
+    get_brickwall_trotter_gates_spin_chain,
+    get_brickwall_trotter_gates_spin_chain_TI,
+)
+
+config.update("jax_enable_x64", True)
 
 
 def get_matrices(tensors):
-    return tensors.reshape((-1,4,4))
+    return tensors.reshape((-1, 4, 4))
+
 
 def get_tensors(matrices):
-    return matrices.reshape((-1,2,2,2,2))
-
-def get_random_TwoQubitGate():
-    return unitary_group.rvs(4).reshape((2,2,2,2))
-
-def get_identity_TwoQubitGate():
-    return jnp.eye(4, dtype=jnp.complex128).reshape((2,2,2,2))
-
-def layer_is_odd(qubits_in_layer):
-    if qubits_in_layer[0][0] == 0 or qubits_in_layer[-1][0] == 0: odd=True
-    elif qubits_in_layer[0][0] == 1 or qubits_in_layer[-1][0] == 1: odd=False
-    return odd
-
-def get_random_layers(n_sites, n_layers, first_layer_odd, is_TI=False):
-    """
-    Generate n_layers layers with two-qubit gates expressed
-    as tensors --> alternate between odd and even layers.
-    """
-    layers, qubits_in_layer = [], []
-    odd = first_layer_odd
-    N_odd_gates, N_even_gates = n_sites//2, n_sites//2  # Number of gates per layer
-    if n_sites%2==0: N_even_gates -= 1
-        
-    for _ in range(n_layers):
-        if odd: n_gates, iqubit = N_odd_gates, 0
-        else: n_gates, iqubit = N_even_gates, 1
-        if is_TI: layers += [[get_random_TwoQubitGate()]]
-        else: layers += [[get_random_TwoQubitGate() for _ in range(n_gates)]]
-        _qubits_in_layer = [[iqubit+i,iqubit+i+1] for i in range(0,2*n_gates,2)]
-        if not odd: _qubits_in_layer = _qubits_in_layer[::-1]
-        qubits_in_layer += [_qubits_in_layer]
-        odd = not odd
-
-    return layers, qubits_in_layer
+    return matrices.reshape((-1, 2, 2, 2, 2))
 
 
 def get_initial_gates(n_sites, is_TI, **kwargs):
     hamiltonian = kwargs['hamiltonian']
-
     t = kwargs['t']
     n_repetitions = kwargs['n_repetitions']
     degree = kwargs['degree']
@@ -65,27 +33,12 @@ def get_initial_gates(n_sites, is_TI, **kwargs):
         Glist_start, qubits = get_brickwall_trotter_gates_spin_chain_TI(
             t, n_sites, n_repetitions, degree, hamiltonian, **kwargs
             )
-        print(len(Glist_start))
     else:
         Glist_start, qubits = get_brickwall_trotter_gates_spin_chain(
             t, n_sites, n_repetitions, degree, hamiltonian, **kwargs
             )
-            
+
     return Glist_start, qubits
-
-
-def get_unitary_of_layer(layer, qubits_in_layer, nqubits):
-    ''' Only works for small systems. Assume brickwall circuit structure. '''
-    assert nqubits<=8
-
-    I = jnp.eye(2)
-    layer = jnp.asarray(layer).reshape((-1,4,4))
-    ops = [gate for gate in layer]
-    if qubits_in_layer[0][0]==1: ops = [I] + ops
-    if qubits_in_layer[-1][-1]==nqubits-2: ops += [I]
-
-    unitary = tensor_product(ops)
-    return unitary
 
 
 def map_list_of_gates_to_layers(qubits):
@@ -102,7 +55,7 @@ def map_list_of_gates_to_layers(qubits):
             layers.append(current_layer)
             current_layer = []
             occupied_qubits.clear()
-        # Add index 
+        # Add index
         current_layer.append(i)
         occupied_qubits.update((q1, q2))
 
@@ -120,14 +73,50 @@ def gate_is_at_boundary(idx_per_layer):
     return jnp.array(end, dtype=jnp.bool_)
 
 
-def snake_layers(layers):
-    for i in range(len(layers)):
-        if i % 2 == 1:     # odd layers → reverse
-            layers[i] = list(reversed(layers[i]))
-    return layers
+class CircuitLayout(NamedTuple):
+    """
+    Order in which the forward and backward passes apply the gates.
+    It only depends on the qubit pairs, so compute it once with get_circuit_layout
+    and pass it to all cost and derivative functions.
+    """
+    qubits: jnp.ndarray          # (n_gates, 2) qubit pair of each gate
+    flat_idxs_fw: jnp.ndarray    # gate indices in forward order
+    layer_ends_fw: jnp.ndarray   # True for the last gate of each layer (forward)
+    flat_idxs_bw: jnp.ndarray    # gate indices in backward order
+    layer_ends_bw: jnp.ndarray   # True for the last gate of each layer (backward)
+    first_layer_increasing: bool  # Forward pass starts with an increasing sweep
+    left_canonical_init: bool    # Backward pass starts with an increasing sweep
 
 
-def map_list_of_gates_to_layers_snaking(qubits):
-    layers = map_list_of_gates_to_layers(qubits)
-    layers = snake_layers(layers)
-    return layers
+def first_layer_is_increasing(qubits, idx_per_layer):
+    '''
+    True if the gates of the first layer are listed from left to right, so the
+    forward pass has to start with an increasing sweep.
+    A first layer with a single gate counts as increasing.
+    '''
+    first_layer = idx_per_layer[0]
+    if len(first_layer) < 2: return True
+    return bool(qubits[first_layer[1]][0] > qubits[first_layer[0]][0])
+
+
+def get_circuit_layout(qubits):
+    qubits = jnp.asarray(qubits)
+    idx_per_layer_fw = map_list_of_gates_to_layers(qubits)
+    idx_per_layer_bw = idx_per_layer_fw[::-1]
+    flat_idxs_fw = jnp.asarray([i for layer in idx_per_layer_fw for i in layer])
+
+    # The sweep direction follows from the gate order of the circuit
+    first_layer_increasing = first_layer_is_increasing(qubits, idx_per_layer_fw)
+
+    # An odd number of layers is padded with an empty layer (see map_list_of_gates_to_layers)
+    even_nlayers = len(idx_per_layer_bw[0]) != 0
+
+    return CircuitLayout(
+        qubits=qubits,
+        flat_idxs_fw=flat_idxs_fw,
+        layer_ends_fw=gate_is_at_boundary(idx_per_layer_fw),
+        flat_idxs_bw=flat_idxs_fw[::-1],
+        layer_ends_bw=gate_is_at_boundary(idx_per_layer_bw),
+        first_layer_increasing=first_layer_increasing,
+        left_canonical_init=(even_nlayers == first_layer_increasing),
+    )

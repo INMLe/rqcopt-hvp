@@ -1,9 +1,11 @@
 import jax.numpy as jnp
 from jax import random
-from rqcopt_mps import *
 from scipy.linalg import rq
 
+from rqcopt_mps import util
+
 key = random.PRNGKey(0)
+
 
 def test_rq():
     print("****** Test rq() ******")
