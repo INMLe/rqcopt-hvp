@@ -1,5 +1,5 @@
 """
-Check the Trotter error scaling of plain (not optimized) Trotter circuits.
+Check the Trotter error scaling of (not optimized) Trotter circuits.
 
 The initial and reference states are loaded from
 1_circuit-optimization/<hamiltonian>/samples/. Each Trotter circuit is applied
@@ -7,8 +7,8 @@ to the initial MPS and the result is compared to the reference MPS.
 The error per sample is sqrt(1 - |<phi_ref|phi_trotter>|^2).
 
 For a Trotter formula of order p, the error at fixed total time t scales as
-dt^p with dt = t/n_repetitions.
-The fitted slope in the log-log plot gives the observed order.
+dt^p with dt = t/n_repetitions. The observed order can be extracted by fitting 
+the error in a log-log plot.
 
 Usage: python3 run-trotter-comparison.py configs/config-ising.yml
 """

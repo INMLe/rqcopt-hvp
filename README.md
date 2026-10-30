@@ -23,6 +23,12 @@ You can generate the reference by running ``python3 generate-reference.py hamilt
 Similarly, you can run the Riemannian optimization by executing ``python3 run-optimization.py hamiltonian/configs/config_{}.yml`` with ``config_tr.yml`` for the trust-region method and ``config_adam.yml`` for the Riemannian ADAM method.
 In both cases, ``hamiltonian`` should be replaced by the folder name of the model you want to run, i.e., ``ising-1d`` or ``heisenberg``.
 
+## Benchmarking the derivatives
+The folder ``2_benchmark_deriv`` contains a script that measures the compile and execution time of the gradient and of the gradient plus HVP.
+Run ``python3 benchmark-derivatives.py configs/config_{hamiltonian}.yml`` with ``ising`` or ``heisenberg``.
+The samples are taken from ``1_circuit-optimization/{hamiltonian}/samples``; if none exist for the configured system size, random product states are used (this does not change the timings).
+Results are written to ``2_benchmark_deriv/results``.
+
 ## Evaluating original Trotter circuits
 The folder ``3_trotterization`` contains a script to evaluate the (not-optimized) Trotter circuits.
 Run ``python3 run-trotter-comparison.py configs/config_{hamiltonian}.yml``.

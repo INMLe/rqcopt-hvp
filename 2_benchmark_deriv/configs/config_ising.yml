@@ -1,0 +1,29 @@
+hamiltonian: ising-1d
+n_sites: 50
+t: 2.
+J: 1.0
+g: 0.75
+h: 0.6
+disordered: False
+n_id_layers: 0
+first_layer_odd: True
+truncation_dim: 32
+rel_tol: 1.0e-11
+abs_tol: 1.0e-14
+n_samples_train: 16
+n_samples_test: 96
+optimizer: trust-region
+cost: HST
+use_tebd: True
+is_TI: True
+# ----- Benchmark settings -----
+# II_k = 2nd-order Trotter with k repetitions, IV_k = 4th-order Trotter with k repetitions
+models:
+- II_1
+- II_2
+- II_3
+- II_4
+- II_5
+- II_6
+n_reps: 10  # number of timed executions per function
+seed: 0  # seed for the random tangent direction of the HVP
